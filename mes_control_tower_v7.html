@@ -1,0 +1,515 @@
+
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>MES Industry 4.0 | Pro Suite Homag & CutRite</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<style>
+:root{--bg:#090e14;--panel:#151c25;--accent:#3a78b8;--green:#2aa84a;--red:#d53b35;--yellow:#d5a11f;--text:#e9eef5;--muted:#7f8c9d;--border:#2d3a49}
+*{box-sizing:border-box}body{margin:0;font-family:Consolas,"Roboto Mono","Segoe UI",sans-serif;background:var(--bg);color:var(--text);font-size:13px}
+.container{padding:20px;max-width:1680px;margin:auto}.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:15px}
+.tabs{display:flex;gap:5px;margin-bottom:20px;background:#111821;padding:5px;border-radius:8px;width:fit-content;flex-wrap:wrap}
+.tab{padding:10px 18px;cursor:pointer;border-radius:6px;color:var(--muted);border:none;background:transparent;font-weight:bold;transition:.2s}.tab.active{background:var(--accent);color:#fff}
+.stats-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:15px;margin-bottom:20px}.stat-card{background:var(--panel);padding:15px;border-radius:8px;border-bottom:3px solid var(--border);min-height:88px}
+.stat-val{font-size:20px;font-weight:bold;display:block;margin-top:6px}.stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.main-grid{display:grid;grid-template-columns:1fr 420px;gap:20px}.panel{background:var(--panel);border-radius:8px;padding:20px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse}th{text-align:left;padding:12px;color:var(--muted);border-bottom:1px solid var(--border);font-size:11px}td{padding:12px;border-bottom:1px solid #1f2937;vertical-align:middle}
+input.edit-cell,select.edit-cell{background:#0a0f14;border:1px solid var(--border);color:#fff;padding:6px;border-radius:4px;width:90px;text-align:center}
+#viz-box{background:#000;height:320px;border-radius:8px;position:relative;overflow:hidden;border:2px solid #222}.saw-beam{position:absolute;width:100%;height:3px;background:#f00;box-shadow:0 0 15px #f00;z-index:10;top:0}
+.btn{padding:14px;border:none;border-radius:6px;cursor:pointer;font-weight:bold;transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px}.btn:hover{filter:brightness(1.08)}
+.btn-start{background:var(--green);color:#fff;width:100%;font-size:14px}.btn-stop{background:var(--red);color:#fff;flex:1}.btn-warn{background:var(--yellow);color:#000;flex:1}.btn-neutral{background:#243244;color:#fff}
+.content-section{display:none}.content-section.active{display:block}.oee-display{display:flex;justify-content:space-around;align-items:center;padding:40px 0}.oee-metric{text-align:center}.oee-metric h1{font-size:48px;margin:10px 0;color:var(--accent)}
+.status-badge{padding:5px 9px;border-radius:4px;font-size:11px;font-weight:bold;display:inline-block}.status-planned{background:rgba(127,140,157,.18);color:var(--muted)}.status-running{background:rgba(58,120,184,.18);color:#7db8f3}.status-done{background:rgba(42,168,74,.18);color:#73dc8b}.status-hold{background:rgba(213,161,31,.18);color:#ffd76a}
+.mini-log{margin-top:15px;font-size:11px;color:#9bb2cb;text-align:left;font-family:monospace;background:#0d1218;padding:10px;border-radius:6px;height:110px;overflow-y:auto}
+.risk-low{color:var(--green)}.risk-medium{color:var(--yellow)}.risk-high{color:var(--red)}
+.form-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-items:end}.field label{display:block;margin-bottom:6px;color:var(--muted);font-size:11px}.field input,.field select,.field textarea{width:100%;background:#0a0f14;border:1px solid var(--border);color:#fff;padding:9px;border-radius:6px}
+.report-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:20px}.report-box{background:#0d1218;border:1px solid var(--border);border-radius:8px;padding:16px}.kv{display:grid;grid-template-columns:1fr auto;gap:8px;padding:8px 0;border-bottom:1px solid #1f2937}.kv:last-child{border-bottom:none}
+.small-note{color:var(--muted);font-size:11px}.wide-table td,.wide-table th{font-size:12px}.pill{background:#1c2631;border-radius:999px;padding:5px 10px;display:inline-block}.report-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+textarea.report-output{width:100%;min-height:300px;background:#0a0f14;color:#dfe8f3;border:1px solid var(--border);border-radius:8px;padding:12px;font-family:Consolas,monospace;resize:vertical}
+@media (max-width:1200px){.stats-grid{grid-template-columns:repeat(4,1fr)}.main-grid,.report-grid{grid-template-columns:1fr}.form-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<div><h2 style="margin:0"><i class="fas fa-microchip" style="color:var(--accent)"></i> MES Control Tower <span style="color:var(--accent)">4.0 PRO</span></h2><small style="color:var(--muted)">System zintegrowany z Homag SAWTEQ &amp; CutRite</small></div>
+<div style="display:flex;align-items:center;gap:12px;"><div style="min-width:220px;background:#1c2631;padding:8px 12px;border-radius:6px;"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Prędkość symulacji</div><div style="display:flex;align-items:center;gap:10px;"><input id="sim-speed" type="range" min="1" max="60" value="10" style="width:130px" oninput="updateSpeedLabel()"><span id="sim-speed-label" style="font-family:monospace;">x10</span></div></div><div id="clock" style="font-family:monospace;font-size:22px;background:#1c2631;padding:5px 15px;border-radius:5px;">00:00:00</div></div>
+</div>
+
+<div class="stats-grid">
+<div class="stat-card" style="border-bottom-color:var(--accent)"><span class="stat-label">Realizacja planu</span><span class="stat-val" id="kpi-progress">0%</span></div>
+<div class="stat-card" style="border-bottom-color:var(--yellow)"><span class="stat-label">Koniec bieżącego zlecenia</span><span class="stat-val" id="kpi-current-end">--:--</span></div>
+<div class="stat-card" style="border-bottom-color:var(--accent)"><span class="stat-label">Start następnego zlecenia</span><span class="stat-val" id="kpi-next-start">--:--</span></div>
+<div class="stat-card" style="border-bottom-color:var(--yellow)"><span class="stat-label">Koniec całej kolejki</span><span class="stat-val" id="kpi-eta">--:--</span></div>
+<div class="stat-card" style="border-bottom-color:var(--red)"><span class="stat-label">Aktualne opóźnienie</span><span class="stat-val" id="kpi-delay">0 min</span></div>
+<div class="stat-card" style="border-bottom-color:var(--green)"><span class="stat-label">Zysk zmiany</span><span class="stat-val" id="kpi-profit">0.00 PLN</span></div>
+<div class="stat-card" style="border-bottom-color:var(--accent)"><span class="stat-label">Zużycie tarczy</span><span class="stat-val" id="kpi-blade">0%</span></div>
+<div class="stat-card" style="border-bottom-color:var(--red)"><span class="stat-label">Ryzyko opóźnienia</span><span class="stat-val risk-low" id="kpi-risk">Niskie</span></div>
+</div>
+
+<div class="tabs">
+<button class="tab active" onclick="setTab('plan', this)">PRODUKCJA I HARMONOGRAM</button>
+<button class="tab" onclick="setTab('oee', this)">ANALIZA OEE</button>
+<button class="tab" onclick="setTab('finance', this)">USTAWIENIA KOSZTÓW</button>
+<button class="tab" onclick="setTab('saw', this)">WYDAJNOŚĆ PIŁY SAWTEQ</button>
+<button class="tab" onclick="setTab('planner', this)">SUGESTIE PRODUKCJI</button>
+        <button class="tab" onclick="setTab('report', this)">PEŁNY RAPORT</button>
+</div>
+
+<div id="section-plan" class="content-section active">
+<div class="panel" style="margin-bottom:20px;">
+<h4 style="margin:0 0 12px 0;color:var(--muted)">Ręczne dodawanie zleceń</h4>
+<div class="form-grid">
+<div class="field"><label>ID zlecenia</label><input id="new-id" placeholder="ZM_NOWE_001"></div>
+<div class="field"><label>Formatki</label><input id="new-parts" type="number" value="12" min="1"></div>
+<div class="field"><label>Powierzchnia m²</label><input id="new-area" type="number" value="15.0" min="0.1" step="0.1"></div>
+<div class="field"><label>Materiał</label><select id="new-material"><option>MDF</option><option>Płyta laminowana</option><option>Sklejka</option><option>Wiórowa</option></select></div>
+<div class="field"><label>Priorytet</label><select id="new-priority"><option>Niski</option><option selected>Standard</option><option>Wysoki</option></select></div>
+<div class="field"><button class="btn btn-neutral" onclick="addManualJob()"><i class="fas fa-plus"></i> DODAJ ZLECENIE</button></div>
+</div>
+<div class="small-note" style="margin-top:10px;">Plan automatycznie wypełnia pełne 8 godzin pracy. Po dodaniu zlecenia harmonogram jest przeliczany.</div>
+</div>
+
+<div class="main-grid">
+<div class="panel">
+<table class="wide-table">
+<thead><tr><th>ZLECENIE</th><th>PLAN. START</th><th>KONIEC (EST)</th><th>CZAS</th><th>SZTUK</th><th>m²</th><th>MATERIAŁ</th><th>PRIORYTET</th><th>STATUS</th></tr></thead>
+<tbody id="job-list"></tbody>
+</table>
+</div>
+
+<div class="panel">
+<h4 style="margin:0 0 10px 0;color:var(--muted)">Podgląd rozkroju (Digital Twin)</h4>
+<div id="viz-box"><div id="saw-beam" class="saw-beam" style="display:none;"></div><svg id="svg-canvas" viewBox="0 0 400 300" width="100%" height="100%"></svg></div>
+<div style="margin-top:20px;"><div style="display:flex; gap:10px;"><button class="btn btn-start" style="flex:1;" onclick="startShift()"><i class="fas fa-play"></i> ROZPOCZNIJ PRACĘ</button><button class="btn btn-neutral" style="flex:1;background:#3b4b5d" onclick="resetSimulation()"><i class="fas fa-rotate-left"></i> RESET</button></div>
+<div style="display:flex;gap:10px;margin-top:10px;"><button class="btn btn-stop" onclick="triggerIncident('AWARIA MASZYNY', 20)"><i class="fas fa-exclamation-triangle"></i> AWARIA</button><button class="btn btn-warn" onclick="triggerIncident('BRAK MATERIAŁU', 10)"><i class="fas fa-pause"></i> PRZESTÓJ</button></div>
+<div style="display:flex; gap:10px; margin-top:10px;"><button class="btn btn-neutral" style="flex:1;background:#7a2222" onclick="startFaultStop()"><i class="fas fa-stop-circle"></i> START AWARII</button><button class="btn btn-neutral" style="flex:1;background:#1f5f2c" onclick="endFaultStop()"><i class="fas fa-play-circle"></i> KONIEC AWARII</button></div></div>
+<div id="status-info" style="margin-top:15px;font-size:11px;color:var(--accent);text-align:center;font-family:monospace;">System gotowy...</div>
+<div id="event-log" class="mini-log"></div>
+</div>
+</div>
+</div>
+
+<div id="section-oee" class="content-section">
+<div class="panel">
+<div class="oee-display">
+<div class="oee-metric"><h1 id="oee-a">100%</h1><small>DOSTĘPNOŚĆ</small></div>
+<div class="oee-metric"><h1 id="oee-p" style="color:var(--green)">0%</h1><small>WYDAJNOŚĆ</small></div>
+<div class="oee-metric"><h1 id="oee-q" style="color:var(--yellow)">98%</h1><small>JAKOŚĆ</small></div>
+</div>
+<div style="text-align:center;padding:30px;border-top:1px solid var(--border);"><small style="color:var(--muted)">GLOBALNY WSKAŹNIK OEE</small><h1 style="font-size:120px;margin:0;" id="oee-total">0%</h1></div>
+</div>
+</div>
+
+<div id="section-finance" class="content-section">
+<div class="panel" style="max-width:700px;margin:auto;">
+<h3>Definicja kosztów i narzędzi</h3>
+<div style="display:grid;gap:15px;">
+<div style="display:flex;justify-content:space-between;"><span>Cena surowca (m²):</span><input type="number" id="cfg-m2" value="55" class="edit-cell"></div>
+<div style="display:flex;justify-content:space-between;"><span>Cena sprzedaży (m²):</span><input type="number" id="cfg-sell" value="125" class="edit-cell"></div>
+<div style="display:flex;justify-content:space-between;"><span>Koszt pracy maszyny (1h):</span><input type="number" id="cfg-h" value="400" class="edit-cell"></div>
+<div style="display:flex;justify-content:space-between;"><span>Zakładany odpad (%):</span><input type="number" id="cfg-waste" value="9" class="edit-cell"></div>
+<div style="display:flex;justify-content:space-between;"><span>Żywotność tarczy (m.b.):</span><input type="number" id="cfg-blade" value="5000" class="edit-cell"></div>
+</div>
+<button class="btn btn-start" style="margin-top:20px;" onclick="saveSettings()">ZAPISZ PARAMETRY</button>
+</div>
+</div>
+
+<div id="section-saw" class="content-section">
+<div class="panel" style="max-width:800px;margin:auto;">
+<h3>Ustawienia wydajności piły SAWTEQ</h3>
+<div style="display:grid;gap:15px;">
+<div style="display:flex;justify-content:space-between;"><span>Nominalna wydajność (m²/h):</span><input type="number" id="saw-capacity" value="48" class="edit-cell"></div>
+<div style="display:flex;justify-content:space-between;"><span>Czas przezbrojenia na zlecenie (min):</span><input type="number" id="saw-setup" value="4" class="edit-cell"></div>
+<div style="display:flex;justify-content:space-between;"><span>Średni czas na formatkę (min):</span><input type="number" id="saw-piece-time" value="3.5" step="0.1" class="edit-cell"></div>
+<div style="display:flex;justify-content:space-between;"><span>Korekta materiał MDF (%):</span><input type="number" id="saw-factor-mdf" value="100" class="edit-cell"></div>
+<div style="display:flex;justify-content:space-between;"><span>Korekta płyta laminowana (%):</span><input type="number" id="saw-factor-lam" value="95" class="edit-cell"></div>
+<div style="display:flex;justify-content:space-between;"><span>Korekta sklejka (%):</span><input type="number" id="saw-factor-skl" value="90" class="edit-cell"></div>
+<div style="display:flex;justify-content:space-between;"><span>Korekta płyta wiórowa (%):</span><input type="number" id="saw-factor-wio" value="105" class="edit-cell"></div>
+</div>
+<button class="btn btn-start" style="margin-top:20px;" onclick="saveSawSettings()">ZAPISZ WYDAJNOŚĆ PIŁY</button>
+<div class="small-note" style="margin-top:10px;">Zmiana parametrów piły automatycznie przelicza czasy wszystkich zleceń w harmonogramie.</div>
+</div>
+</div>
+
+<div id="section-report" class="content-section">
+<div class="report-grid">
+<div class="panel">
+<h3 style="margin-top:0;">Pełny raport zmiany</h3>
+<div class="report-box">
+<div class="kv"><span>Liczba zleceń</span><strong id="r-job-count">0</strong></div>
+<div class="kv"><span>Zakończone zlecenia</span><strong id="r-done-count">0</strong></div>
+<div class="kv"><span>Łączna powierzchnia planowana</span><strong id="r-total-area">0.0 m²</strong></div>
+<div class="kv"><span>Łączny planowany czas</span><strong id="r-total-min">0 min</strong></div>
+<div class="kv"><span>Opóźnienie</span><strong id="r-delay">0 min</strong></div>
+<div class="kv"><span>Przewidywany koniec kolejki</span><strong id="r-eta">--:--</strong></div>
+<div class="kv"><span>Zysk zmiany</span><strong id="r-profit">0.00 PLN</strong></div>
+<div class="kv"><span>Szacowany odpad</span><strong id="r-waste">0.00 PLN</strong></div>
+<div class="kv"><span>Zużycie tarczy</span><strong id="r-blade">0%</strong></div>
+<div class="kv"><span>OEE globalne</span><strong id="r-oee">0%</strong></div>
+</div>
+<div class="report-actions"><button class="btn btn-neutral" onclick="generateReportText()"><i class="fas fa-file-alt"></i> GENERUJ RAPORT</button><button class="btn btn-neutral" onclick="downloadReport()"><i class="fas fa-download"></i> POBIERZ TXT</button><button class="btn btn-neutral" onclick="openPrintableReport()"><i class="fas fa-file-pdf"></i> RAPORT PDF / DRUK</button></div>
+<div style="margin-top:16px;"><textarea id="report-output" class="report-output" placeholder="Tutaj pojawi się wygenerowany raport tekstowy..."></textarea></div><div id="report-preview" class="report-box" style="margin-top:16px;"></div><div style="margin-top:16px; display:grid; grid-template-columns:1fr 1fr; gap:16px;"><div class="report-box"><h4 style="margin-top:0;">Wydajność i OEE</h4><canvas id="reportChart" height="170"></canvas></div><div class="report-box"><h4 style="margin-top:0;">Wykonanie planu</h4><canvas id="planChart" height="170"></canvas></div></div>
+</div>
+
+<div class="panel">
+<h3 style="margin-top:0;">Szczegóły harmonogramu</h3>
+<div class="report-box" style="margin-bottom:16px;"><div class="small-note" style="margin-bottom:8px;">Podsumowanie dla kierownika zmiany</div><div><span class="pill">8 godzin planu</span> <span class="pill" id="r-fill">Wypełnienie: 0%</span></div></div>
+<table class="wide-table"><thead><tr><th>Zlecenie</th><th>Start</th><th>Koniec</th><th>Czas</th><th>Status</th></tr></thead><tbody id="report-table"></tbody></table>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+const STORAGE_KEY="mes_control_tower_state_v6";const SHIFT_START="08:00";const SHIFT_HOURS=8;let reportChart=null;let planChart=null;
+let STATE={isRunning:false,delay:0,bladeMeters:0,totalProfit:0,totalWaste:0,startTime:null,downtimeMinutes:0,producedArea:0,completedJobs:0,activeJobIndex:null,
+jobs:[{id:"ZM_KUCH_001",start:"08:00",parts:12,area:15.5,material:"MDF",priority:"Standard",status:"Zaplanowane",dur:46},{id:"ZM_KUCH_002",start:"08:46",parts:8,area:9.2,material:"Płyta laminowana",priority:"Standard",status:"Zaplanowane",dur:32},{id:"ZM_BIURO_99",start:"09:18",parts:20,area:24.0,material:"Sklejka",priority:"Wysoki",status:"Zaplanowane",dur:78},{id:"ZM_SZAFY_04",start:"10:36",parts:35,area:48.0,material:"Wiórowa",priority:"Standard",status:"Zaplanowane",dur:126}],
+cfg:{m2:55,sell:125,labor:400,waste:9,bladeMax:5000},saw:{capacityM2h:48,setupMin:4,pieceTimeMin:3.5,factors:{"MDF":100,"Płyta laminowana":95,"Sklejka":90,"Wiórowa":105}},fault:{active:false,startedAt:null,label:""},planner:[],sim:{speed:10, clock: SHIFT_START, running:false},log:[]};
+
+function init(){loadState();syncConfigInputs();syncSawInputs();updateSpeedLabel();fillShiftToEightHours();ensurePlannerRows();renderJobs();updateKPIs();updateOEE();renderLog();refreshReport();renderPlannerTable();recalculatePlanner();updateClock();generateReportText()}
+function setTab(name,btn){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.content-section').forEach(s=>s.classList.remove('active'));document.getElementById('section-'+name).classList.add('active');btn.classList.add('active');if(name==='report')refreshReport()}
+function parseTime(hhmm){const [h,m]=hhmm.split(':').map(Number);const d=new Date();d.setSeconds(0,0);d.setHours(h,m,0,0);return d}
+function formatTime(d){return d.toLocaleTimeString("pl-PL",{hour:"2-digit",minute:"2-digit"})}function addMinutesToClock(hhmm, mins){const d=parseTime(hhmm);const x=new Date(d.getTime()+mins*60000);return formatTime(x)}function timeDiffMin(a,b){return Math.round((parseTime(b)-parseTime(a))/60000)}
+function getMaterialFactor(material){return Number(STATE.saw.factors[material]??100)/100}
+function recalcJobDuration(job){const areaBased=(job.area/Math.max(1,STATE.saw.capacityM2h))*60;const partBased=job.parts*Number(STATE.saw.pieceTimeMin);const handling=Math.max(0, job.parts-6)*0.6;const stackComplexity=Math.ceil(job.parts/10)*2;const base=Math.max(areaBased,partBased)+handling+stackComplexity;const factor=1/getMaterialFactor(job.material);job.dur=Math.max(8,Math.ceil(base*factor+Number(STATE.saw.setupMin)))}
+function getShiftRange(){const start=parseTime(SHIFT_START);const end=new Date(start.getTime()+SHIFT_HOURS*60*60000);return {start,end}}
+function priorityRank(priority){if(priority==="Wysoki")return 3;if(priority==="Standard")return 2;return 1}
+function fillShiftToEightHours(){STATE.jobs.forEach(recalcJobDuration);const {start}=getShiftRange();let total=STATE.jobs.reduce((sum,j)=>sum+j.dur,0);let counter=1;while(total<SHIFT_HOURS*60){const remaining=SHIFT_HOURS*60-total;const parts=Math.max(4,Math.min(18,Math.round(remaining/4)));const area=parseFloat((parts*1.15).toFixed(1));const materials=["MDF","Płyta laminowana","Sklejka","Wiórowa"];const material=materials[counter%materials.length];const job={id:"AUTO_"+String(counter).padStart(3,'0'),start:SHIFT_START,parts,area,material,priority:"Standard",status:"Zaplanowane",dur:0};recalcJobDuration(job);if(total+job.dur>SHIFT_HOURS*60+20)break;STATE.jobs.push(job);total+=job.dur;counter++}STATE.jobs.sort((a,b)=>priorityRank(b.priority)-priorityRank(a.priority)||a.id.localeCompare(b.id));let cursor=new Date(start);for(const job of STATE.jobs){job.start=formatTime(cursor);cursor=new Date(cursor.getTime()+job.dur*60000)}saveState()}
+function getStatusClass(status){if(status==="W realizacji")return "status-running";if(status==="Zakończone")return "status-done";if(status==="Wstrzymane")return "status-hold";return "status-planned"}
+function getRealSchedule(){const {start:shiftStart}=getShiftRange();let baseStart=shiftStart;if(STATE.sim && STATE.sim.running && STATE.sim.clock){const simStart=parseTime(STATE.sim.clock);if(simStart>shiftStart) baseStart=simStart;}let cursor=new Date(baseStart.getTime()+STATE.delay*60000);return STATE.jobs.map(job=>{const realStart=new Date(cursor);const realEnd=new Date(realStart.getTime()+job.dur*60000);cursor=new Date(realEnd);return {...job,realStart,realEnd}})}
+function renderJobs(){const body=document.getElementById('job-list');const schedule=getRealSchedule();body.innerHTML=schedule.map((j,i)=>`<tr><td><b style="color:var(--accent)">${j.id}</b></td><td>${formatTime(j.realStart)}</td><td>${formatTime(j.realEnd)}</td><td>${j.dur} min</td><td><input type="number" value="${j.parts}" class="edit-cell" onchange="updateJob(${i}, this.value)"></td><td>${j.area.toFixed(1)} m²</td><td>${j.material}</td><td>${j.priority}</td><td><span class="status-badge ${getStatusClass(j.status)}">${j.status}</span></td></tr>`).join('');updateKPIs(schedule);refreshReport(schedule);ensurePlannerRows();renderPlannerTable();recalculatePlanner();saveState();setTimeout(()=>generateReportText(),0)}
+function updateKPIs(schedule=getRealSchedule()){const currentIndex=STATE.activeJobIndex;const currentJob=currentIndex!==null?schedule[currentIndex]:null;const nextJob=currentIndex!==null&&currentIndex+1<schedule.length?schedule[currentIndex+1]:null;const lastJob=schedule[schedule.length-1];
+document.getElementById('kpi-progress').innerText=Math.round((STATE.completedJobs/Math.max(1,STATE.jobs.length))*100)+"%";
+document.getElementById('kpi-current-end').innerText=currentJob?formatTime(currentJob.realEnd):"--:--";
+document.getElementById('kpi-next-start').innerText=nextJob?formatTime(nextJob.realStart):"--:--";
+document.getElementById('kpi-eta').innerText=lastJob?formatTime(lastJob.realEnd):"--:--";
+document.getElementById('kpi-delay').innerText=STATE.delay+" min";
+document.getElementById('kpi-profit').innerText=(STATE.totalProfit-STATE.totalWaste).toFixed(2)+" PLN";
+document.getElementById('kpi-blade').innerText=Math.min(100,Math.round((STATE.bladeMeters/STATE.cfg.bladeMax)*100))+"%";
+let riskText="Niskie",riskClass="risk-low";if(STATE.delay>=20&&STATE.delay<45){riskText="Średnie";riskClass="risk-medium"}else if(STATE.delay>=45){riskText="Wysokie";riskClass="risk-high"}const riskEl=document.getElementById('kpi-risk');riskEl.innerText=riskText;riskEl.className="stat-val "+riskClass}
+function updateJob(i,val){const pieces=Math.max(1,parseInt(val||1,10));const job=STATE.jobs[i];job.parts=pieces;job.area=parseFloat((pieces*1.2).toFixed(1));recalcJobDuration(job);fillShiftToEightHours();addLog(`Zmieniono liczbę formatek w ${job.id} na ${pieces}. Nowy czas: ${job.dur} min.`);renderJobs()}
+function addManualJob(){const id=document.getElementById('new-id').value.trim()||("ZM_RECZNE_"+String(Date.now()).slice(-4));const parts=Math.max(1,Number(document.getElementById('new-parts').value||1));const area=Math.max(.1,Number(document.getElementById('new-area').value||.1));const material=document.getElementById('new-material').value;const priority=document.getElementById('new-priority').value;const job={id,start:SHIFT_START,parts,area,material,priority,status:"Zaplanowane",dur:0};recalcJobDuration(job);STATE.jobs.push(job);STATE.jobs.sort((a,b)=>priorityRank(b.priority)-priorityRank(a.priority)||a.id.localeCompare(b.id));fillShiftToEightHours();ensurePlannerRows();addLog(`Dodano ręcznie zlecenie ${id}.`);renderJobs()}
+
+function startFaultStop(){
+    if(STATE.fault.active) return;
+    STATE.fault.active = true;
+    STATE.fault.startedAt = Date.now();
+    STATE.fault.label = "Awaria aktywna";
+    if(STATE.activeJobIndex !== null && STATE.jobs[STATE.activeJobIndex]){
+        STATE.jobs[STATE.activeJobIndex].status = "Wstrzymane";
+    }
+    document.getElementById('status-info').innerHTML = '<span style="color:var(--red)">AWARIA AKTYWNA - produkcja zatrzymana</span>';
+    addLog("Uruchomiono awarię. Produkcja zatrzymana.");
+    renderJobs();
+}
+
+function endFaultStop(){
+    if(!STATE.fault.active) return;
+    const mins = Math.max(1, Math.round((Date.now() - STATE.fault.startedAt)/60000));
+    STATE.delay += mins;
+    STATE.downtimeMinutes += mins;
+    STATE.fault.active = false;
+    STATE.fault.startedAt = null;
+    STATE.fault.label = "";
+    if(STATE.activeJobIndex !== null && STATE.jobs[STATE.activeJobIndex]){
+        STATE.jobs[STATE.activeJobIndex].status = "W realizacji";
+    }
+    document.getElementById('status-info').innerHTML = `<span style="color:var(--yellow)">KONIEC AWARII - wznowiono produkcję (+${mins} min)</span>`;
+    addLog(`Zakończono awarię. Dodano ${mins} min przestoju.`);
+    renderJobs();
+    updateOEE();
+}
+
+function triggerIncident(type,mins){STATE.delay+=mins;STATE.downtimeMinutes+=mins;if(STATE.activeJobIndex!==null&&STATE.jobs[STATE.activeJobIndex].status==="W realizacji"){STATE.jobs[STATE.activeJobIndex].status="Wstrzymane";renderJobs();setTimeout(()=>{if(STATE.activeJobIndex!==null&&STATE.jobs[STATE.activeJobIndex].status==="Wstrzymane"){STATE.jobs[STATE.activeJobIndex].status="W realizacji";document.getElementById('status-info').innerHTML=`<span style="color:var(--yellow)">Wznowiono pracę po incydencie.</span>`;renderJobs()}},1200)}
+document.getElementById('status-info').innerHTML=`<span style="color:var(--red)">ALARM: ${type} (+${mins} min)</span>`;addLog(`Incydent: ${type}. Dodano ${mins} min opóźnienia.`);renderJobs();updateOEE()}
+async function startShift(){if(STATE.isRunning)return;STATE.isRunning=true;STATE.startTime=new Date();STATE.sim.running=true;STATE.sim.clock=SHIFT_START;updateClock();addLog("Rozpoczęto zmianę.");document.getElementById('status-info').innerText="Trwa realizacja planu...";
+for(let i=0;i<STATE.jobs.length;i++){STATE.activeJobIndex=i;let job=STATE.jobs[i];if(job.status==="Zakończone")continue;job.status="W realizacji";renderJobs();addLog(`Start programu ${job.id}.`);await simulateCutting(job);let income=job.area*(STATE.cfg.sell-STATE.cfg.m2);let waste=job.area*(STATE.cfg.waste/100)*STATE.cfg.m2;STATE.totalProfit+=income;STATE.totalWaste+=waste;STATE.producedArea+=job.area;STATE.completedJobs+=1;job.status="Zakończone";addLog(`Zakończono ${job.id}.`);renderJobs();updateOEE()}
+STATE.activeJobIndex=null;STATE.isRunning=false;STATE.sim.running=false;document.getElementById('status-info').innerText="Zmiana zakończona.";addLog("Zakończono całą kolejkę produkcyjną.");renderJobs();saveState()}
+async function simulateCutting(job){const svg=document.getElementById('svg-canvas');const beam=document.getElementById('saw-beam');svg.innerHTML='';beam.style.display='block';const rectCount=Math.min(24,Math.max(6,job.parts));for(let r=0;r<rectCount;r++){const rect=document.createElementNS("http://www.w3.org/2000/svg","rect");rect.setAttribute("x",(r%4)*100+5);rect.setAttribute("y",Math.floor(r/4)*48+5);rect.setAttribute("width",90);rect.setAttribute("height",42);rect.setAttribute("fill","#1b2633");rect.setAttribute("stroke","#3a78b8");rect.setAttribute("id","p-"+r);svg.appendChild(rect)}const stepMinutes=Math.max(1,job.dur/rectCount);for(let r=0;r<rectCount;r++){while(STATE.fault.active){await new Promise(res=>setTimeout(res,250))}const delayMs=Math.max(120,Math.round(1000/Math.max(1,STATE.sim.speed)));await new Promise(res=>setTimeout(res,delayMs));STATE.sim.clock=addMinutesToClock(STATE.sim.clock, stepMinutes);updateClock();beam.style.top=(Math.floor(r/4)*48+45)+"px";STATE.bladeMeters+=Math.max(2,Math.round(job.parts/8));const p=document.getElementById("p-"+r);if(p){p.setAttribute("fill",r===rectCount-1?"rgba(255,165,0,0.45)":"rgba(42,168,74,0.4)");setTimeout(()=>p.setAttribute("fill","rgba(42,168,74,0.4)"),180)}updateKPIs();refreshReport()}beam.style.display='none';saveState()}
+function updateOEE(){const totalPlannedMinutes=STATE.jobs.reduce((sum,j)=>sum+j.dur,0);const totalOperatingMinutes=Math.max(1,totalPlannedMinutes+STATE.delay);const availability=Math.max(40,((totalPlannedMinutes-STATE.downtimeMinutes)/totalOperatingMinutes)*100);const theoreticalAreaPerHour=Number(STATE.saw.capacityM2h);const actualHours=totalOperatingMinutes/60;const performance=Math.min(100,Math.max(35,(STATE.producedArea/Math.max(.1,actualHours))/theoreticalAreaPerHour*100));const quality=98;const total=(availability*performance*quality)/10000;
+document.getElementById('oee-a').innerText=Math.round(availability)+"%";document.getElementById('oee-p').innerText=Math.round(performance)+"%";document.getElementById('oee-q').innerText=Math.round(quality)+"%";document.getElementById('oee-total').innerText=Math.round(total)+"%"}
+function refreshReport(schedule=getRealSchedule()){const totalArea=STATE.jobs.reduce((s,j)=>s+j.area,0);const totalMin=STATE.jobs.reduce((s,j)=>s+j.dur,0);const doneCount=STATE.jobs.filter(j=>j.status==="Zakończone").length;const last=schedule[schedule.length-1];const fill=Math.min(999,Math.round((totalMin/(SHIFT_HOURS*60))*100));
+document.getElementById('r-job-count').innerText=STATE.jobs.length;document.getElementById('r-done-count').innerText=doneCount;document.getElementById('r-total-area').innerText=totalArea.toFixed(1)+" m²";document.getElementById('r-total-min').innerText=totalMin+" min";document.getElementById('r-delay').innerText=STATE.delay+" min";document.getElementById('r-eta').innerText=last?formatTime(last.realEnd):"--:--";document.getElementById('r-profit').innerText=(STATE.totalProfit-STATE.totalWaste).toFixed(2)+" PLN";document.getElementById('r-waste').innerText=STATE.totalWaste.toFixed(2)+" PLN";document.getElementById('r-blade').innerText=Math.min(100,Math.round((STATE.bladeMeters/STATE.cfg.bladeMax)*100))+"%";document.getElementById('r-oee').innerText=document.getElementById('oee-total').innerText;document.getElementById('r-fill').innerText="Wypełnienie: "+fill+"%";
+document.getElementById('report-table').innerHTML=schedule.map(job=>`<tr><td>${job.id}</td><td>${formatTime(job.realStart)}</td><td>${formatTime(job.realEnd)}</td><td>${job.dur} min</td><td>${job.status}</td></tr>`).join('');drawReportCharts(totalMin)}
+function generateReportText(){const schedule=getRealSchedule();const totalArea=STATE.jobs.reduce((s,j)=>s+j.area,0).toFixed(1);const totalMin=STATE.jobs.reduce((s,j)=>s+j.dur,0);const doneCount=STATE.jobs.filter(j=>j.status==="Zakończone").length;const last=schedule[schedule.length-1];const lines=["RAPORT ZMIANY - MES CONTROL TOWER 4.0 PRO","=========================================","",`Data raportu: ${new Date().toLocaleString('pl-PL')}`,`Liczba zleceń: ${STATE.jobs.length}`,`Zakończone zlecenia: ${doneCount}`,`Łączna powierzchnia: ${totalArea} m²`,`Łączny czas planowany: ${totalMin} min`,`Opóźnienie: ${STATE.delay} min`,`Przewidywany koniec kolejki: ${last?formatTime(last.realEnd):'--:--'}`,`Zysk zmiany: ${(STATE.totalProfit-STATE.totalWaste).toFixed(2)} PLN`,`Szacowany odpad: ${STATE.totalWaste.toFixed(2)} PLN`,`Zużycie tarczy: ${Math.min(100,Math.round((STATE.bladeMeters/STATE.cfg.bladeMax)*100))}%`,`OEE globalne: ${document.getElementById('oee-total').innerText}`,"","SZCZEGÓŁY ZLECEŃ","----------------"];schedule.forEach(job=>lines.push(`${job.id} | start ${formatTime(job.realStart)} | koniec ${formatTime(job.realEnd)} | czas ${job.dur} min | ${job.material} | ${job.status}`));lines.push("","ZDARZENIA","--------");(STATE.log.length?STATE.log:["Brak zdarzeń."]).forEach(x=>lines.push(x));document.getElementById('report-output').value=lines.join('\n')}
+function downloadReport(){if(!document.getElementById('report-output').value.trim())generateReportText();const blob=new Blob([document.getElementById('report-output').value],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='raport_zmiany_mes.txt';a.click();URL.revokeObjectURL(url)}
+function updateSpeedLabel(){STATE.sim.speed=Number(document.getElementById("sim-speed").value||10);document.getElementById("sim-speed-label").innerText="x"+STATE.sim.speed;saveState()}
+
+function resetSimulation(){
+    const currentJobs = STATE.jobs.map(j => ({
+        ...j,
+        status: "Zaplanowane"
+    }));
+    const currentCfg = JSON.parse(JSON.stringify(STATE.cfg));
+    const currentSaw = JSON.parse(JSON.stringify(STATE.saw));
+    const currentPlanner = JSON.parse(JSON.stringify(STATE.planner || []));
+    STATE = {
+        isRunning:false,
+        delay:0,
+        bladeMeters:0,
+        totalProfit:0,
+        totalWaste:0,
+        startTime:null,
+        downtimeMinutes:0,
+        producedArea:0,
+        completedJobs:0,
+        activeJobIndex:null,
+        jobs: currentJobs,
+        cfg: currentCfg,
+        saw: currentSaw,
+        fault:{active:false,startedAt:null,label:""},
+        planner: currentPlanner,
+        sim:{speed:Number(document.getElementById("sim-speed").value||10), clock: SHIFT_START, running:false},
+        log:[]
+    };
+    document.getElementById('status-info').innerText = 'System zresetowany. Gotowy do nowej symulacji.';
+    document.getElementById('svg-canvas').innerHTML = '';
+    document.getElementById('saw-beam').style.display = 'none';
+    updateClock();
+    renderJobs();
+    updateOEE();
+    renderLog();
+    refreshReport();
+    generateReportText();
+    saveState();
+}
+
+function renderReportPreview(data){
+    const preview = document.getElementById('report-preview');
+    if(!preview) return;
+    const rows = data.schedule.map(job => `<tr><td>${job.id}</td><td>${formatTime(job.realStart)}</td><td>${formatTime(job.realEnd)}</td><td>${job.dur} min</td><td>${job.status}</td></tr>`).join('');
+    preview.innerHTML = `
+        <h4 style="margin-top:0;">Raport menedżerski zmiany</h4>
+        <div class="small-note" style="margin-bottom:12px;">Raport gotowy do eksportu lub wydruku.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div>
+                <div class="kv"><span>Data raportu</span><strong>${new Date().toLocaleString('pl-PL')}</strong></div>
+                <div class="kv"><span>Liczba zleceń</span><strong>${STATE.jobs.length}</strong></div>
+                <div class="kv"><span>Zakończone zlecenia</span><strong>${data.doneCount}</strong></div>
+                <div class="kv"><span>Powierzchnia planowana</span><strong>${data.totalArea} m²</strong></div>
+                <div class="kv"><span>Łączny czas planowany</span><strong>${data.totalMin} min</strong></div>
+                <div class="kv"><span>Przewidywany koniec kolejki</span><strong>${data.last?formatTime(data.last.realEnd):'--:--'}</strong></div>
+            </div>
+            <div>
+                <div class="kv"><span>Opóźnienie</span><strong>${STATE.delay} min</strong></div>
+                <div class="kv"><span>Zysk zmiany</span><strong>${data.net} PLN</strong></div>
+                <div class="kv"><span>Szacowany odpad</span><strong>${data.waste} PLN</strong></div>
+                <div class="kv"><span>Zużycie tarczy</span><strong>${data.blade}%</strong></div>
+                <div class="kv"><span>OEE globalne</span><strong>${data.oee}</strong></div>
+                <div class="kv"><span>Realizacja planu</span><strong>${Math.round((STATE.completedJobs/Math.max(1,STATE.jobs.length))*100)}%</strong></div>
+            </div>
+        </div>
+        <h4 style="margin:18px 0 10px 0;">Podsumowanie harmonogramu</h4>
+        <table class="wide-table">
+            <thead><tr><th>Zlecenie</th><th>Start</th><th>Koniec</th><th>Czas</th><th>Status</th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>
+    `;
+}
+
+function openPrintableReport(){
+    generateReportText();
+    const c1 = document.getElementById('reportChart');
+    const c2 = document.getElementById('planChart');
+    const img1 = c1 ? c1.toDataURL('image/png') : '';
+    const img2 = c2 ? c2.toDataURL('image/png') : '';
+    const reportHtml = `
+    <!DOCTYPE html>
+    <html lang="pl">
+    <head>
+        <meta charset="UTF-8">
+        <title>Raport zmiany MES</title>
+        <style>
+            body{font-family:Arial,sans-serif;color:#111;margin:24px;line-height:1.35}
+            h1,h2,h3{margin:0 0 10px 0}
+            .meta{margin-bottom:16px;color:#444}
+            .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+            .box{border:1px solid #bbb;border-radius:8px;padding:12px}
+            .kv{display:grid;grid-template-columns:1fr auto;gap:8px;padding:6px 0;border-bottom:1px solid #e5e5e5}
+            .kv:last-child{border-bottom:none}
+            table{width:100%;border-collapse:collapse;margin-top:12px}
+            th,td{padding:8px;border:1px solid #ccc;text-align:left;font-size:12px}
+            img{max-width:100%;border:1px solid #ddd;border-radius:8px;margin-top:10px}
+            .footer{margin-top:16px;color:#666;font-size:12px}
+        </style>
+    </head>
+    <body>
+        <h1>Raport zmiany - MES Control Tower 4.0 PRO</h1>
+        <div class="meta">Data raportu: ${new Date().toLocaleString('pl-PL')}</div>
+        ${document.getElementById('report-preview').innerHTML}
+        <h3 style="margin-top:20px;">Wykresy wydajności</h3>
+        <div class="grid">
+            <div class="box">${img1 ? `<img src="${img1}" alt="Wydajność i OEE">` : ''}</div>
+            <div class="box">${img2 ? `<img src="${img2}" alt="Wykonanie planu">` : ''}</div>
+        </div>
+        <h3>Raport tekstowy</h3>
+        <div class="box" style="white-space:pre-wrap;">${document.getElementById('report-output').value.replace(/</g,'&lt;')}</div>
+        <div class="footer">Raport przygotowany do zapisu jako PDF przez funkcję drukowania przeglądarki.</div>
+        <script>window.onload=()=>window.print();<\/script>
+    </body></html>`;
+    const w = window.open('', '_blank');
+    w.document.open();
+    w.document.write(reportHtml);
+    w.document.close();
+}
+
+function drawReportCharts(totalMin){
+    const oee = Number((document.getElementById('oee-total').innerText || '0').replace('%',''));
+    const availability = Number((document.getElementById('oee-a').innerText || '0').replace('%',''));
+    const performance = Number((document.getElementById('oee-p').innerText || '0').replace('%',''));
+    const quality = Number((document.getElementById('oee-q').innerText || '0').replace('%',''));
+    const fillPct = Math.round((totalMin/(SHIFT_HOURS*60))*100);
+    const progress = Math.round((STATE.completedJobs/Math.max(1,STATE.jobs.length))*100);
+
+    if(reportChart) reportChart.destroy();
+    if(planChart) planChart.destroy();
+
+    const ctx1 = document.getElementById('reportChart');
+    const ctx2 = document.getElementById('planChart');
+    if(!ctx1 || !ctx2 || typeof Chart === 'undefined') return;
+
+    reportChart = new Chart(ctx1, {
+        type:'bar',
+        data:{labels:['Dostępność','Wydajność','Jakość','OEE'],datasets:[{label:'%',data:[availability,performance,quality,oee],backgroundColor:['#3a78b8','#2aa84a','#d5a11f','#6e91ff']}]},
+        options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,max:100}}}
+    });
+
+    planChart = new Chart(ctx2, {
+        type:'bar',
+        data:{labels:['Wypełnienie 8h','Realizacja','Opóźnienie min'],datasets:[{label:'Wartość',data:[fillPct,progress,STATE.delay],backgroundColor:['#3a78b8','#2aa84a','#d53b35']}]},
+        options:{responsive:true,plugins:{legend:{display:false}}}
+    });
+}
+
+async function downloadPdfReport(){
+    generateReportText();
+    refreshReport();
+    const jspdf = window.jspdf;
+    if(!jspdf){ alert('Biblioteka PDF nie załadowała się.'); return; }
+    const doc = new jspdf.jsPDF();
+    let y = 15;
+    doc.setFontSize(16);
+    doc.text('Raport zmiany - MES Control Tower 4.0 PRO', 14, y);
+    y += 8;
+    doc.setFontSize(10);
+    doc.text('Data raportu: ' + new Date().toLocaleString('pl-PL'), 14, y);
+    y += 8;
+    const lines = document.getElementById('report-output').value.split('\n').slice(0, 25);
+    lines.forEach(line => { if(y < 260){ doc.text(String(line).slice(0,120), 14, y); y += 5; } });
+    const c1 = document.getElementById('reportChart');
+    const c2 = document.getElementById('planChart');
+    if(c1){ doc.addPage(); doc.setFontSize(14); doc.text('Wydajność i OEE', 14, 18); doc.addImage(c1.toDataURL('image/png'), 'PNG', 12, 28, 180, 80); }
+    if(c2){ doc.text('Wykonanie planu', 14, 122); doc.addImage(c2.toDataURL('image/png'), 'PNG', 12, 130, 180, 80); }
+    doc.save('raport_zmiany_mes.pdf');
+}
+function updateClock(){document.getElementById("clock").innerText=(STATE.sim&&STATE.sim.clock?STATE.sim.clock+":00":new Date().toLocaleTimeString("pl-PL"))}
+function saveSettings(){STATE.cfg.m2=Number(document.getElementById('cfg-m2').value);STATE.cfg.sell=Number(document.getElementById('cfg-sell').value);STATE.cfg.labor=Number(document.getElementById('cfg-h').value);STATE.cfg.waste=Number(document.getElementById('cfg-waste').value);STATE.cfg.bladeMax=Number(document.getElementById('cfg-blade').value);addLog("Zapisano parametry kosztowe.");saveState();renderJobs();updateOEE();alert("Parametry zapisane.")}
+function saveSawSettings(){STATE.saw.capacityM2h=Number(document.getElementById('saw-capacity').value);STATE.saw.setupMin=Number(document.getElementById('saw-setup').value);STATE.saw.pieceTimeMin=Number(document.getElementById('saw-piece-time').value);STATE.saw.factors["MDF"]=Number(document.getElementById('saw-factor-mdf').value);STATE.saw.factors["Płyta laminowana"]=Number(document.getElementById('saw-factor-lam').value);STATE.saw.factors["Sklejka"]=Number(document.getElementById('saw-factor-skl').value);STATE.saw.factors["Wiórowa"]=Number(document.getElementById('saw-factor-wio').value);STATE.jobs.forEach(recalcJobDuration);addLog("Zapisano ustawienia wydajności piły SAWTEQ.");fillShiftToEightHours();ensurePlannerRows();renderJobs();updateOEE();alert("Parametry wydajności piły zapisane.")}
+function syncConfigInputs(){document.getElementById('cfg-m2').value=STATE.cfg.m2;document.getElementById('cfg-sell').value=STATE.cfg.sell;document.getElementById('cfg-h').value=STATE.cfg.labor;document.getElementById('cfg-waste').value=STATE.cfg.waste;document.getElementById('cfg-blade').value=STATE.cfg.bladeMax}
+function syncSawInputs(){document.getElementById('saw-capacity').value=STATE.saw.capacityM2h;document.getElementById('saw-setup').value=STATE.saw.setupMin;document.getElementById('saw-piece-time').value=STATE.saw.pieceTimeMin;document.getElementById('saw-factor-mdf').value=STATE.saw.factors["MDF"];document.getElementById('saw-factor-lam').value=STATE.saw.factors["Płyta laminowana"];document.getElementById('saw-factor-skl').value=STATE.saw.factors["Sklejka"];document.getElementById('saw-factor-wio').value=STATE.saw.factors["Wiórowa"]}
+
+
+function ensurePlannerRows(){
+    STATE.planner = STATE.jobs.map((job, idx) => {
+        const existing = (STATE.planner || []).find(p => p.id === job.id) || {};
+        return {
+            id: job.id,
+            homagReady: existing.homagReady || addMinutesToClock(job.start || SHIFT_START, 10 + idx*5),
+            weekeReady: existing.weekeReady || addMinutesToClock(job.start || SHIFT_START, 20 + idx*7),
+            packingNeed: existing.packingNeed || addMinutesToClock(job.start || SHIFT_START, 60 + idx*20),
+            finalPriority: existing.finalPriority || job.priority || "Standard"
+        };
+    });
+}
+
+function renderPlannerTable(){
+    const body = document.getElementById('planner-input-table');
+    if(!body) return;
+    body.innerHTML = (STATE.planner || []).map((row, i) => `
+        <tr>
+            <td><b style="color:var(--accent)">${row.id}</b></td>
+            <td><input class="edit-cell" style="width:90px" value="${row.homagReady}" onchange="updatePlannerRow(${i}, 'homagReady', this.value)"></td>
+            <td><input class="edit-cell" style="width:90px" value="${row.weekeReady}" onchange="updatePlannerRow(${i}, 'weekeReady', this.value)"></td>
+            <td><input class="edit-cell" style="width:90px" value="${row.packingNeed}" onchange="updatePlannerRow(${i}, 'packingNeed', this.value)"></td>
+            <td>
+                <select class="edit-cell" style="width:110px" onchange="updatePlannerRow(${i}, 'finalPriority', this.value)">
+                    ${["Niski","Standard","Wysoki"].map(x => `<option ${x===row.finalPriority?'selected':''}>${x}</option>`).join('')}
+                </select>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function updatePlannerRow(i, key, value){
+    STATE.planner[i][key] = value;
+    recalculatePlanner();
+    saveState();
+}
+
+function seedPlannerDefaults(){
+    ensurePlannerRows();
+    STATE.planner.forEach((row, i) => {
+        row.homagReady = addMinutesToClock(SHIFT_START, 15 + i*35);
+        row.weekeReady = addMinutesToClock(SHIFT_START, 35 + i*42);
+        row.packingNeed = addMinutesToClock(SHIFT_START, 120 + i*40);
+        row.finalPriority = i === 0 ? "Wysoki" : (i % 3 === 0 ? "Niski" : "Standard");
+    });
+    renderPlannerTable();
+    recalculatePlanner();
+    addLog("Wstawiono przykładowy plan linii HOMAG, WEEKE i pakowni.");
+}
+
+function priorityScore(val){
+    if(val === "Wysoki") return 35;
+    if(val === "Standard") return 20;
+    return 8;
+}
+
+function recalculatePlanner(){
+    if(!document.getElementById('planner-ranking')) return;
+    const sawReady = STATE.sim && STATE.sim.clock ? STATE.sim.clock : SHIFT_START;
+    const merged = STATE.jobs.map(job => {
+        const p = (STATE.planner || []).find(x => x.id === job.id) || {homagReady:SHIFT_START, weekeReady:SHIFT_START, packingNeed:"15:00", finalPriority:job.priority};
+        const completeReady = [p.homagReady, p.weekeReady].sort().slice(-1)[0];
+        const startGap = Math.abs(timeDiffMin(sawReady, completeReady));
+        const packGap = timeDiffMin(completeReady, p.packingNeed);
+        const dueBonus = packGap >= 0 && packGap <= 90 ? 28 : (packGap > 90 ? 14 : 35);
+        const fit = Math.max(45, Math.min(100, priorityScore(p.finalPriority) + dueBonus + (startGap <= 30 ? 25 : 10) + 20));
+        const score = priorityScore(p.finalPriority) + (startGap <= 30 ? 35 : Math.max(0, 20 - Math.round(startGap/10))) + dueBonus;
+        let comment = "Najlepsza kompletacja dla pakowni";
+        if(startGap > 60) comment = "Komplet z innych maszyn nie jest jeszcze gotowy";
+        else if(packGap < 0) comment = "Pakownia już oczekuje na komplet";
+        else if(packGap <= 60) comment = "Dobrze trafia w okno pakowania";
+        return {job, planner:p, completeReady, score, fit, comment};
+    }).sort((a,b) => b.score - a.score);
+
+    const best = merged[0];
+    document.getElementById('planner-best-job').innerText = best ? best.job.id : "--";
+    document.getElementById('planner-best-start').innerText = best ? best.completeReady : "--:--";
+    document.getElementById('planner-best-fit').innerText = best ? best.fit + "%" : "0%";
+    document.getElementById('planner-best-reason').innerText = best ? best.comment : "Brak danych planistycznych";
+
+    document.getElementById('planner-ranking').innerHTML = merged.map((row, idx) => `
+        <tr>
+            <td>${idx+1}</td>
+            <td>${row.job.id}</td>
+            <td>${row.completeReady}</td>
+            <td>${row.score}</td>
+            <td>${row.comment}</td>
+        </tr>
+    `).join('');
+}
+
+
+function addLog(msg){const stamp=new Date().toLocaleTimeString('pl-PL');STATE.log.push(`[${stamp}] ${msg}`);if(STATE.log.length>150)STATE.log.shift();renderLog();saveState()}
+function renderLog(){const logBox=document.getElementById('event-log');logBox.innerHTML=STATE.log.length?STATE.log.map(x=>`<div>${x}</div>`).join(''):'<div>[SYSTEM] Brak zdarzeń.</div>';logBox.scrollTop=logBox.scrollHeight}
+function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify(STATE))}
+function loadState(){const raw=localStorage.getItem(STORAGE_KEY);if(!raw)return;try{const saved=JSON.parse(raw);STATE={...STATE,...saved}}catch(e){console.warn("Nie udało się odczytać stanu.")}}
+init();
+</script>
+</body>
+</html>
